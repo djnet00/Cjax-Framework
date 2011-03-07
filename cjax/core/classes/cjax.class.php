@@ -15,7 +15,7 @@
 *   Website: https://github.com/cjax/Cjax-Framework                     $      
 *   Email: cjxxi@msn.com    
 *   Date: 2/12/2007                           $     
-*   File Last Changed:  02/27/2011            $     
+*   File Last Changed:  03/04/2011            $     
 **####################################################################################################    */   
 
 /**
@@ -336,7 +336,7 @@ class CJAX_FRAMEWORK Extends CoreEvents {
 			$replace['<do>'] = '<_do_>';
 			$replace['</do>'] = '</_do_>';
 			$replace['[do]'] = '[_do_]';
-			$replace['[/_do_]'] = '[/_do_]';
+			$replace['[/do]'] = '[/_do_]';
 			$find = array_keys($replace);
 
 			foreach($actions as $k => $v) {
@@ -351,6 +351,8 @@ class CJAX_FRAMEWORK Extends CoreEvents {
 					$xdata[$k] = str_replace($find,$replace,$v2);
 
 					$xdata[$k] .="<alt_element>$_element</alt_element><alt_event>$defined_event</alt_event>";
+
+					$xdata[$k] = str_replace($find, $replace, $xdata[$k]);
 
 					if(isset($events[$k."-".$_element."-".$defined_event])) {
 						$events[$_element."-".$defined_event][] = "<binded>{$xdata[$k]}</binded>";

@@ -15,7 +15,7 @@
 *   Website: https://github.com/cjax/Cjax-Framework                     $      
 *   Email: cjxxi@msn.com    
 *   Date: 2/12/2007                           $     
-*   File Last Changed:  02/26/2011            $     
+*   File Last Changed:  03/02/2011            $     
 **####################################################################################################    */   
 
 
@@ -390,11 +390,12 @@ class CoreEvents extends cjaxFormat {
 		}
 		$data = "{$function}{$xml}";
 
+		$data = "<cjax>$data</cjax>";
 		if($function=='<do>AddEventTo</do>') {
-			self::cache("<cjax>$data</cjax>",'actions');
+			self::cache($data,'actions');
 		} else {
 			self::$cjax_data_counter++;
-			self::cache("<cjax>$data</cjax>");
+			self::cache($data);
 		}
 
 		//is an Iframe
@@ -836,9 +837,13 @@ class CoreEvents extends cjaxFormat {
 			@session_start();
 		}
 		$_SESSION['cjax_cache'] = '';
+		$_SESSION['cjax_dir'] = '';
+
 		if (!headers_sent()) {
 			@setcookie('cjax_cache','',false);
+			@setcookie('cjax_dir','',false);
 		}
+
 		//set_error_handler($old_err);
 	}
 

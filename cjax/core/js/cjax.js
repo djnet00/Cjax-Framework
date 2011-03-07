@@ -14,7 +14,7 @@
 *   Website: https://github.com/cjax/Cjax-Framework                     $      
 *   Email: cjxxi@msn.com    
 *   Date: 2/12/2007                           $     
-*   File Last Changed:  02/26/2011            $     
+*   File Last Changed:  03/05/2011            $     
 **####################################################################################################    */   
 
 /**
@@ -44,6 +44,8 @@ function CJAX_FRAMEWORK() {
 	this.chache_templates = [];
 	this.dir;
 	this.styles = [];
+	//collection of elements that are using listeners
+	this.current_element = [];
 	
 	this.timer;
 	
@@ -65,7 +67,6 @@ function CJAX_FRAMEWORK() {
 	
 	//holds the internal cjax style
 	var HELPER_STYLE;
-	
 	
 	/**
 	 * 
@@ -204,6 +205,16 @@ function CJAX_FRAMEWORK() {
 					}catch(e) {}
 				},
 				injectXML:function(buffer,xml) {
+					
+					/*//Injects xml into a xml string, needsw to provide with a json object.
+					 * var xml = {"rel":rel};
+					var data = '';
+					for(x in new_xml) {
+						data += CJAX.left_delimeter+x+CJAX.right_delimeter+new_xml[x]+CJAX.left_delimeter+'/'+x+CJAX.right_delimeter;
+					}
+					buffer = buffer.replace(/<\/out>/gi,data+'</out>');
+					return buffer;*/
+				
 					buffer = buffer.replace(/<\/out>/gi,xml+'</out>');
 					return buffer;
 				},
@@ -772,8 +783,13 @@ function CJAX_FRAMEWORK() {
     };
     
 	this.click		=		function( buffer ) {
-		var item = CJAX.xml('element',buffer);
-		elem = CJAX.$( item ); 
+		if(CJAX.$(buffer)){
+			var elem = CJAX.$(buffer);
+			
+		} else {
+			var item = CJAX.xml('element',buffer);
+			elem = CJAX.$( item ); 
+		}
 		if( elem )elem.click();
 	};
 	
@@ -1144,6 +1160,13 @@ function CJAX_FRAMEWORK() {
 		};
 	}();
 	
+	   
+	this.uniqid		=		function uniqid()
+	{
+		var newDate = new Date;
+		return newDate.getTime();
+	};
+	
 	/**
 	 * Util Set
 	 */
@@ -1155,6 +1178,7 @@ function CJAX_FRAMEWORK() {
 				}
 				if( !element ) return false;
 				var element = CJAX.is_element( element );
+				var event_id = CJAX.uniqid();
 				
 				
 				var f = method.toString();
@@ -1206,7 +1230,9 @@ function CJAX_FRAMEWORK() {
 							if(!CJAX.is_cjax(method)) {
 								method = "<cjax>"+method+"</cjax>";
 							}
-							CJAX.process(method);
+						
+							
+							CJAX.process(method,'set.event',element);
 						} else {
 							eval(method);
 						}
@@ -1782,8 +1808,14 @@ function CJAX_FRAMEWORK() {
 		var fs = {"debug_env":1,"debug_test":1};
 		return fs;
 	};
-	
-	this.process		=		function( buffer , caller) 
+
+	/**
+	 * Proccess specific command.
+	 * buffer is the command
+	 * caller, any function caller reference.
+	 * alt_element - an alternative element that is being used.
+	 */	
+	this.process		=		function( buffer , caller, alt_element) 
 	{
 		if(!CJAX.defined(caller)) {
 			var caller = 'default-';
@@ -1986,7 +2018,10 @@ function CJAX_FRAMEWORK() {
                    setTimeout(PREFIX+CJAX.method+'("'+buffer+'")',seconds*1000);
 					
 				} else {
-				   eval(PREFIX+CJAX.method+'("'+buffer+'")');
+					if(alt_element) {
+						this.current_element = alt_element;
+					}
+					eval(PREFIX+CJAX.method+'("'+buffer+'")');
 				}
 				
 			}
@@ -1996,7 +2031,10 @@ function CJAX_FRAMEWORK() {
 				}
 				
 				try {
-					 eval(PREFIX+CJAX.method+'("'+buffer+'")');
+					if(alt_element) {
+						this.current_element = alt_element;
+					}
+					eval(PREFIX+CJAX.method+'("'+buffer+'")');
 				} catch( e ) {
 					
 					alert('#process unabled to load function: '+ CJAX.method+'();  '+e);
@@ -2616,7 +2654,11 @@ function CJAX_FRAMEWORK() {
 		var msg = CJAX.xml('msg',buffer);
 		msg = CJAX.decode( msg );
 		if(!msg) {
-			msg = 'CJAX-alert: Nothing here!';
+			if(CJAX.debug) {
+
+				console.log('CJAX:alert',' request was empty');
+			}
+			return;
 			if(typeof caller !='undefined') {
 				msg = msg+ ' - '+caller;
 			}
@@ -2758,6 +2800,7 @@ function CJAX_FRAMEWORK() {
 		if( !text ) text = 'Loading...';
 		if(text =='no_text') text = null;
 		
+		
 		if(text) {
 			CJAX.msg.loading(text,true);
 		}
@@ -2790,16 +2833,22 @@ function CJAX_FRAMEWORK() {
 		var files = false;
 		var first_destino = null;
 		
-		
+		if(!frm && CJAX.current_element) {
+			frm = CJAX.current_element.form;
+		}
 		if(frm != '') {
 			var url ='';
 			var elem_value = '';
 			var is_my_radio = new Array( 10 );
 			var splitter;
 			var assign = '=';
-			form = document.forms[frm];
-			if(!form) {
-				form = CJAX.$(frm);
+			if(!CJAX.is_element(frm) ) {
+				form = document.forms[frm];
+				if(!form) {
+					form = CJAX.$(frm);
+				}
+			} else {
+				form  = frm;
 			}
 			
 			if( !form || !form.elements) {
@@ -3062,30 +3111,51 @@ function CJAX_FRAMEWORK() {
 		
 		CJAX.HTTP_REQUEST_INSTANCE.send ( ((CJAX.IS_POST)? destino:null) );
 		if(files) {
-			form.submit();
-			if(iframe) {
-				var content = null;
-				var interval_max = 150;
-				var interval_count = 0;
-				
-				var interval = setInterval(function() {
-					interval_count++;
-					try {
-						content = iframe.contentWindow.document.body.innerHTML;
-					} catch(err) {
-						alert("CJAX: Error - uploading files "+err);
-						clearInterval ( interval );
-					}
-					if(content) {
-						CJAX.process_all("<xml class='cjax'><cjax>"+content+"</cjax></xml>",false,false,'exe_form_iframe');
-						 clearInterval ( interval );
-					}
-					if(interval_count > interval_max) {
-						alert("Uploading Failed.");
-						clearInterval ( interval );
-					}
-				},150);
-			}
+			var _submit		=	function () {
+				form.submit();
+				if(iframe) {
+					var content = null;
+					var interval_max = 300;
+					var interval_timeout = 200;
+					var interval_count = 0;
+					
+					
+					var interval = setInterval(function() {
+						interval_count++;
+						try {
+							
+							content = iframe.contentWindow.document.body.innerHTML;
+							content = content.replace("&lt;","<");
+							content = content.replace("&gt;",">");
+						} catch(err) {
+							alert("CJAX: Error - uploading files "+err);
+							clearInterval ( interval );
+						}
+						if(content) {
+							
+							console.log('iframe response:',content);
+							var values = CJAX.xml(CJAX.name,content,true);
+							
+							for(var i = 0; i < values.length;i++) {
+								buffer = values[i];
+								var method = CJAX.xml('do',buffer);
+								if(CJAX.debug) {
+									console.log('#',i,'process_all in loading mode','calling:',method);
+								}
+								CJAX.process( '<cjax>'+buffer+'</cjax>', 'process_all');
+								
+							}
+							clearInterval ( interval );
+						}
+						if(interval_count > interval_max) {
+							alert("Uploading Failed.");
+							clearInterval ( interval );
+						}
+					},interval_timeout);
+				}
+			
+			};
+			setTimeout(function(){_submit();},1000);
 		}
 	};
 	
